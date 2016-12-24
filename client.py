@@ -26,6 +26,10 @@
 
 from autobahn.twisted.websocket import WebSocketClientProtocol, \
     WebSocketClientFactory
+import json
+
+
+message_to_send = ""
 
 
 class MyClientProtocol(WebSocketClientProtocol):
@@ -37,18 +41,22 @@ class MyClientProtocol(WebSocketClientProtocol):
         print("WebSocket connection open.")
 
         def hello():
-            self.sendMessage(u"Hello, world!".encode('utf8'))
-            self.sendMessage(b"\x00\x01\x03\x04", isBinary=True)
-            self.factory.reactor.callLater(1, hello)
 
-        # start sending messages every second ..
+            self.sendMessage(json.dumps({"heart_beat": "1"}).encode('utf8'), isBinary=False)
+            self.factory.reactor.callLater(1, hello)
+            if message_to_send:
+                print "MessageToSend: " + message_to_send
+                self.sendMessage(message_to_send, isBinary=False)
+                global message_to_send
+                message_to_send = ""
+
         hello()
 
     def onMessage(self, payload, isBinary):
-        if isBinary:
-            print("Binary message received: {0} bytes".format(len(payload)))
+        if not isBinary:
+            print("Message: {0}".format(payload.decode('utf8')))
         else:
-            print("Text message received: {0}".format(payload.decode('utf8')))
+            print("Binary message is received")
 
     def onClose(self, wasClean, code, reason):
         print("WebSocket connection closed: {0}".format(reason))
@@ -57,14 +65,48 @@ class MyClientProtocol(WebSocketClientProtocol):
 if __name__ == '__main__':
 
     import sys
+    import thread
 
     from twisted.python import log
     from twisted.internet import reactor
+
+    import thread
+
+
+    def someFunc():
+        user_name_my = raw_input("Enter username:")
+        user_name_target = raw_input("Enter target username:")
+
+        #print("Setup UserName: " + user_name_my + " UseNameTarget: " + user_name_target)
+        #send username to server
+        #self.sendMessage(json.dumps({"subscribe_user_name": user_name_my}).encode('utf8'), isBinary=False)
+        global  message_to_send
+        message_to_send = json.dumps({"subscribe_user_name": user_name_my}).encode('utf8')
+        user_quit = False
+        while user_quit is False:
+            print("Enter Message To Send: ")
+            message_send = raw_input("Enter Message To Send: ")
+            if message_send == "q":
+                user_quit = True
+            else:
+                message_send_dict = {"user_name_my": user_name_my, "user_name_target": user_name_target,
+                                     "message": message_send}
+                message_to_send = json.dumps(message_send_dict).encode('utf8')
+                print "Entered: " + message_to_send
+                #self.sendMessage(json.dumps(message_send_dict).encode('utf8'), isBinary=False)
+
 
     log.startLogging(sys.stdout)
 
     factory = WebSocketClientFactory(u"ws://127.0.0.1:9000")
     factory.protocol = MyClientProtocol
 
+    thread.start_new_thread(someFunc, ())
+
     reactor.connectTCP("127.0.0.1", 9000, factory)
     reactor.run()
+
+
+
+
+
