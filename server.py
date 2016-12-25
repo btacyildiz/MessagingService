@@ -24,9 +24,21 @@
 #
 ###############################################################################
 
+
+import uuid
+import sys
+import json
+
+from flask import Flask, render_template
+
+from twisted.web.wsgi import WSGIResource
+from twisted.web.server import Site
+from twisted.python import log
+from twisted.internet import reactor
+
 from autobahn.twisted.websocket import WebSocketServerProtocol, \
     WebSocketServerFactory
-import json
+from autobahn.twisted.resource import WebSocketResource, WSGIRootResource
 
 users = {}
 
@@ -68,6 +80,7 @@ class MyServerProtocol(WebSocketServerProtocol):
 
                 if user_name_destination in users.keys():
                     delivery_dict = {"user_name_sender": user_name_source, "message": message}
+                    global users
                     users[user_name_destination].sendMessage(json.dumps(delivery_dict))
                 else:
                     print("Username: " + user_name_destination + " is not connected")
@@ -77,20 +90,32 @@ class MyServerProtocol(WebSocketServerProtocol):
         # TODO check the client and  remove from dict
 
 
+app = Flask(__name__)
+app.secret_key = str(uuid.uuid4())
+
+
+@app.route('/')
+def page_home():
+    return render_template('index.html')
+
 if __name__ == '__main__':
-
-    import sys
-
-    from twisted.python import log
-    from twisted.internet import reactor
 
     log.startLogging(sys.stdout)
 
-    factory = WebSocketServerFactory(u"ws://127.0.0.1:9000")
-    factory.protocol = MyServerProtocol
-    # factory.setProtocolOptions(maxConnections=2)
+    # create a Twisted Web resource for our WebSocket server
+    wsFactory = WebSocketServerFactory(u"ws://127.0.0.1:8080")
+    wsFactory.protocol = MyServerProtocol
+    wsResource = WebSocketResource(wsFactory)
 
-    # note to self: if using putChild, the child must be bytes...
+    # create a Twisted Web WSGI resource for our Flask server
+    wsgiResource = WSGIResource(reactor, reactor.getThreadPool(), app)
 
-    reactor.listenTCP(9000, factory)
+    # create a root resource serving everything via WSGI/Flask, but
+    # the path "/ws" served by our WebSocket stuff
+    rootResource = WSGIRootResource(wsgiResource, {b'ws': wsResource})
+
+    # create a Twisted Web Site and run everything
+    site = Site(rootResource)
+
+    reactor.listenTCP(8080, site)
     reactor.run()

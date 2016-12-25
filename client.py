@@ -73,7 +73,6 @@ def submission_loop():
     client_conn.disconnect()
 
 
-
 class MyClientProtocol(WebSocketClientProtocol):
 
     def onConnect(self, response):
@@ -90,7 +89,9 @@ class MyClientProtocol(WebSocketClientProtocol):
 
         def heart_beat():
             self.sendMessage(json.dumps({"heart_beat": "1"}).encode('utf8'), isBinary=False)
-            self.factory.reactor.callLater(1, heart_beat)
+            # call heart_beat function every 3 seconds to keep connection alive
+            # TODO is this necessary?
+            self.factory.reactor.callLater(3, heart_beat)
         heart_beat()
 
     def onMessage(self, payload, isBinary):
@@ -125,10 +126,10 @@ if __name__ == '__main__':
 
     log.startLogging(sys.stdout)
 
-    factory = WebSocketClientFactory(u"ws://127.0.0.1:9000")
+    factory = WebSocketClientFactory(u"ws://ec2-35-162-164-18.us-west-2.compute.amazonaws.com/ws")
     factory.protocol = MyClientProtocol
 
-    reactor.connectTCP("127.0.0.1", 9000, factory)
+    reactor.connectTCP("ec2-35-162-164-18.us-west-2.compute.amazonaws.com", 8080, factory)
     reactor.run()
 
 
