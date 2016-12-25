@@ -43,15 +43,22 @@ class MyServerProtocol(WebSocketServerProtocol):
         if isBinary:
             print("Binary message received: {0} bytes".format(len(payload)))
         else:
-            print("Debug message received: {0}".format(payload.decode('utf8')))
+            if "heart_beat" not in payload.decode('utf8'):
+                print("Debug message received: {0}".format(payload.decode('utf8')))
             # check if it is for subscription
 
             message_recv_dict = json.loads(payload.decode('utf8'))
             if "subscribe_user_name" in message_recv_dict:
-
+                # add username to users
                 user_name_subs = message_recv_dict["subscribe_user_name"]
                 global users
                 users[user_name_subs] = self
+                print("Username " + user_name_subs + "is subscribed")
+            elif "unsubscribe_user_name" in message_recv_dict:
+                # remove username from users
+                user_name_subs = message_recv_dict["unsubscribe_user_name"]
+                global users
+                del users[user_name_subs]
                 print("Username " + user_name_subs + "is subscribed")
             elif "user_name_my" in message_recv_dict and "user_name_target" in message_recv_dict \
                     and "message" in message_recv_dict:
@@ -65,14 +72,9 @@ class MyServerProtocol(WebSocketServerProtocol):
                 else:
                     print("Username: " + user_name_destination + " is not connected")
 
-
-        """if "berkay" in users.keys() and "ayse" in users.keys():
-            users["berkay"].sendMessage("berkay says hello", isBinary)
-            users["ayse"].sendMessage("ayse says hello", isBinary)
-        """
-
     def onClose(self, wasClean, code, reason):
         print("WebSocket connection closed: {0}".format(reason))
+        # TODO check the client and  remove from dict
 
 
 if __name__ == '__main__':
