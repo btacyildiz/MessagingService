@@ -21,6 +21,7 @@ parts/
 sdist/
 var/
 MessagingServiceEnv/
+env/
 *.egg-info/
 .installed.cfg
 *.egg

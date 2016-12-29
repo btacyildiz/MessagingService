@@ -126,10 +126,10 @@ if __name__ == '__main__':
 
     log.startLogging(sys.stdout)
 
-    factory = WebSocketClientFactory(u"ws://ec2-35-162-164-18.us-west-2.compute.amazonaws.com/ws")
+    factory = WebSocketClientFactory(u"ws://127.0.0.1:8080/ws")
     factory.protocol = MyClientProtocol
 
-    reactor.connectTCP("ec2-35-162-164-18.us-west-2.compute.amazonaws.com", 8080, factory)
+    reactor.connectTCP("127.0.0.1", 8080, factory)
     reactor.run()
 
 
