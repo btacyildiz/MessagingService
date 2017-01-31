@@ -93,29 +93,31 @@ class MyServerProtocol(WebSocketServerProtocol):
 app = Flask(__name__)
 app.secret_key = str(uuid.uuid4())
 
+log.startLogging(sys.stdout)
+
+# create a Twisted Web resource for our WebSocket server
+wsFactory = WebSocketServerFactory(u"ws://127.0.0.1:8080")
+wsFactory.protocol = MyServerProtocol
+wsResource = WebSocketResource(wsFactory)
+
+# create a Twisted Web WSGI resource for our Flask server
+wsgiResource = WSGIResource(reactor, reactor.getThreadPool(), app)
+
+# create a root resource serving everything via WSGI/Flask, but
+# the path "/ws" served by our WebSocket stuff
+rootResource = WSGIRootResource(wsgiResource, {b'ws': wsResource})
+
+# create a Twisted Web Site and run everything
+site = Site(rootResource)
+
+reactor.listenTCP(8080, site)
+reactor.run()
+
 
 @app.route('/')
 def page_home():
     return render_template('index.html')
 
-if __name__ == '__main__':
+#if __name__ == '__main__':
 
-    log.startLogging(sys.stdout)
 
-    # create a Twisted Web resource for our WebSocket server
-    wsFactory = WebSocketServerFactory(u"ws://127.0.0.1:8080")
-    wsFactory.protocol = MyServerProtocol
-    wsResource = WebSocketResource(wsFactory)
-
-    # create a Twisted Web WSGI resource for our Flask server
-    wsgiResource = WSGIResource(reactor, reactor.getThreadPool(), app)
-
-    # create a root resource serving everything via WSGI/Flask, but
-    # the path "/ws" served by our WebSocket stuff
-    rootResource = WSGIRootResource(wsgiResource, {b'ws': wsResource})
-
-    # create a Twisted Web Site and run everything
-    site = Site(rootResource)
-
-    reactor.listenTCP(8080, site)
-    reactor.run()
