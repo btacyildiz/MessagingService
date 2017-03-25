@@ -25,22 +25,20 @@
 ###############################################################################
 
 
-import uuid
-import sys
 import json
-
-from flask import Flask, render_template
 
 from twisted.web.wsgi import WSGIResource
 from twisted.web.server import Site
-from twisted.python import log
 from twisted.internet import reactor
+from twisted.application import service
 
 from autobahn.twisted.websocket import WebSocketServerProtocol, \
     WebSocketServerFactory
 from autobahn.twisted.resource import WebSocketResource, WSGIRootResource
 
-users = {}
+from ServiceFlask import flaskapp
+from ClientInfo import users
+#users = {}
 
 
 class MyServerProtocol(WebSocketServerProtocol):
@@ -90,10 +88,7 @@ class MyServerProtocol(WebSocketServerProtocol):
         # TODO check the client and  remove from dict
 
 
-app = Flask(__name__)
-app.secret_key = str(uuid.uuid4())
-
-log.startLogging(sys.stdout)
+#log.startLogging(sys.stdout)
 
 # create a Twisted Web resource for our WebSocket server
 wsFactory = WebSocketServerFactory(u"ws://127.0.0.1:8080")
@@ -101,7 +96,7 @@ wsFactory.protocol = MyServerProtocol
 wsResource = WebSocketResource(wsFactory)
 
 # create a Twisted Web WSGI resource for our Flask server
-wsgiResource = WSGIResource(reactor, reactor.getThreadPool(), app)
+wsgiResource = WSGIResource(reactor, reactor.getThreadPool(), flaskapp)
 
 # create a root resource serving everything via WSGI/Flask, but
 # the path "/ws" served by our WebSocket stuff
@@ -111,13 +106,16 @@ rootResource = WSGIRootResource(wsgiResource, {b'ws': wsResource})
 site = Site(rootResource)
 
 reactor.listenTCP(8080, site)
-reactor.run()
+
+# this is the core part of any tac file, the creation of the root-level
+# application object
+application = service.Application("Demo application")
 
 
-@app.route('/')
-def page_home():
-    return render_template('index.html')
+print("Server is initiated...")
 
-#if __name__ == '__main__':
+if __name__ == '__main__':
+    reactor.run()
+    print("Main is called")
 
 
